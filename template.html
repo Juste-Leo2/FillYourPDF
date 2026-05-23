@@ -132,10 +132,20 @@
             cursor: text;
             line-height: 1.2;
         }
-
         .text-annotation:focus, .text-annotation:hover {
             border-color: #3b82f6;
             background: rgba(255, 255, 255, 0.7);
+        }
+
+        .rect-annotation {
+            position: absolute;
+            pointer-events: auto;
+            border: 1px dashed transparent;
+            cursor: move;
+        }
+        .rect-annotation:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
         }
 
         /* Toolbar */
@@ -259,7 +269,7 @@
         </div>
     </div>
 
-    <div id="pen-options" class="tool-options" style="left: calc(50% - 110px);">
+    <div id="pen-options" class="tool-options" style="left: calc(50% - 130px);">
         <button class="option-btn active" data-size="2" style="border-radius: 50%;">
             <div style="width: 4px; height: 4px; background: currentColor; border-radius: 50%;"></div>
         </button>
@@ -271,16 +281,26 @@
         </button>
     </div>
 
-    <div id="text-options" class="tool-options" style="left: calc(50% - 50px);">
+    <div id="text-options" class="tool-options" style="left: calc(50% - 70px);">
         <button class="option-btn" data-size="12">P</button>
         <button class="option-btn active" data-size="18">M</button>
         <button class="option-btn" data-size="28">G</button>
+    </div>
+
+    <div id="rect-options" class="tool-options" style="left: calc(50% - 10px);">
+        <button class="option-btn active" data-color="white" style="border: 1px solid #d1d5db;">
+            <div style="width: 20px; height: 20px; background: white; border: 1px solid #ccc;"></div>
+        </button>
+        <button class="option-btn" data-color="black">
+            <div style="width: 20px; height: 20px; background: black;"></div>
+        </button>
     </div>
 
     <div id="toolbar">
         <button id="btn-main" class="tool-btn active" title="Main (Déplacer/Zoomer)">✋</button>
         <button id="btn-pen" class="tool-btn" title="Stylo (Dessiner)">✏️</button>
         <button id="btn-text" class="tool-btn" title="Texte">T</button>
+        <button id="btn-rect" class="tool-btn" title="Rectangle (Masquer/Censurer)">⬛</button>
         <button id="export-btn">Exporter PDF</button>
     </div>
 
@@ -290,13 +310,18 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         // Variables d'état Global
-        let currentMode = 'MAIN'; // 'MAIN', 'PEN', 'TEXT'
+        let currentMode = 'MAIN'; // 'MAIN', 'PEN', 'TEXT', 'RECT'
         let currentPenSize = 2;
         let currentTextSize = 18;
+        let currentRectColor = 'white';
         
         let transform = { scale: 1, x: 0, y: 0 };
         let isPanning = false, startPan = { x: 0, y: 0 };
         let isDrawing = false, lastDrawPoint = null;
+        
+        let isDrawingRect = false;
+        let startRectPoint = null;
+        let currentRectElement = null;
 
         // Variables Multi-pages
         let pdfDoc = null;
@@ -336,12 +361,10 @@
                 pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
                 totalPages = pdfDoc.numPages;
                 
-                // Configurer la UI multi-pages
                 document.getElementById('page-total').innerText = totalPages;
                 document.getElementById('page-input').max = totalPages;
                 document.getElementById('page-nav').style.display = totalPages > 1 ? 'flex' : 'none';
 
-                // Initialiser le stockage
                 for (let i = 1; i <= totalPages; i++) {
                     pagesData[i] = { drawingDataUrl: null, textElements: [] };
                 }
@@ -359,14 +382,10 @@
             
             loader.style.display = 'block';
             
-            // Sauvegarder l'état de la page actuelle (si ce n'est pas le tout premier chargement)
-            if (pdfDoc && drawCanvas.width > 0) {
-                saveCurrentPageData();
-            }
+            if (pdfDoc && drawCanvas.width > 0) saveCurrentPageData();
 
             currentPage = pageNum;
             
-            // UI
             document.getElementById('page-input').value = currentPage;
             document.getElementById('btn-prev-page').disabled = currentPage === 1;
             document.getElementById('btn-next-page').disabled = currentPage === totalPages;
@@ -377,26 +396,19 @@
 
                 setupCanvas(viewport.width, viewport.height);
 
-                await pdfPage.render({
-                    canvasContext: pdfCtx,
-                    viewport: viewport
-                }).promise;
+                await pdfPage.render({ canvasContext: pdfCtx, viewport: viewport }).promise;
 
                 restoreCurrentPageData();
                 centerDocument();
                 loader.style.display = 'none';
-
             } catch (err) {
                 console.error("Erreur page:", err);
             }
         }
 
         function saveCurrentPageData() {
-            // Un canevas vide en DataURL fait quelques centaines d'octets.
-            // On le capture dans tous les cas pour simplifier la logique.
             pagesData[currentPage].drawingDataUrl = drawCanvas.toDataURL();
-            
-            // Stocker les DOMElements sans les détruire pour garder les événements (drag, focus)
+            // Les rectangles et les textes partagent la même logique de layer !
             pagesData[currentPage].textElements = Array.from(textLayer.children);
             textLayer.innerHTML = '';
         }
@@ -404,7 +416,6 @@
         function restoreCurrentPageData() {
             drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
             textLayer.innerHTML = '';
-
             const data = pagesData[currentPage];
             
             if (data.drawingDataUrl) {
@@ -435,9 +446,7 @@
             pageContainer.style.height = `${h}px`;
             pdfCanvas.width = w; pdfCanvas.height = h;
             drawCanvas.width = w; drawCanvas.height = h;
-            drawCtx.lineCap = 'round';
-            drawCtx.lineJoin = 'round';
-            drawCtx.strokeStyle = 'black';
+            drawCtx.lineCap = 'round'; drawCtx.lineJoin = 'round'; drawCtx.strokeStyle = 'black';
         }
 
         function centerDocument() {
@@ -456,6 +465,7 @@
         document.getElementById('btn-main').addEventListener('click', () => setMode('MAIN'));
         document.getElementById('btn-pen').addEventListener('click', () => setMode('PEN'));
         document.getElementById('btn-text').addEventListener('click', () => setMode('TEXT'));
+        document.getElementById('btn-rect').addEventListener('click', () => setMode('RECT'));
 
         document.querySelectorAll('#pen-options .option-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -473,15 +483,24 @@
             });
         });
 
+        document.querySelectorAll('#rect-options .option-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('#rect-options .option-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                currentRectColor = e.currentTarget.dataset.color;
+            });
+        });
+
         function setMode(mode) {
             currentMode = mode;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(mode === 'MAIN' ? 'btn-main' : mode === 'PEN' ? 'btn-pen' : 'btn-text').classList.add('active');
+            document.getElementById(mode === 'MAIN' ? 'btn-main' : mode === 'PEN' ? 'btn-pen' : mode === 'TEXT' ? 'btn-text' : 'btn-rect').classList.add('active');
             
             document.getElementById('pen-options').classList.toggle('visible', mode === 'PEN');
             document.getElementById('text-options').classList.toggle('visible', mode === 'TEXT');
+            document.getElementById('rect-options').classList.toggle('visible', mode === 'RECT');
 
-            drawCanvas.style.cursor = mode === 'MAIN' ? 'grab' : mode === 'PEN' ? 'crosshair' : 'text';
+            drawCanvas.style.cursor = mode === 'MAIN' ? 'grab' : (mode === 'PEN' || mode === 'RECT') ? 'crosshair' : 'text';
         }
 
         // Zoom / Pan events
@@ -514,7 +533,7 @@
         drawCanvas.addEventListener('mousedown', handlePointerDown);
         drawCanvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
-                isDrawing = isPanning = false;
+                isDrawing = isPanning = isDrawingRect = false;
                 initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 initialScale = transform.scale;
             } else if (e.touches.length === 1) handlePointerDown(e);
@@ -550,6 +569,20 @@
                 drawCtx.beginPath();
                 drawCtx.arc(lastDrawPoint.x, lastDrawPoint.y, (currentPenSize * RENDER_SCALE) / 2, 0, Math.PI * 2);
                 drawCtx.fill();
+            } else if (currentMode === 'RECT') {
+                isDrawingRect = true;
+                startRectPoint = getCanvasCoords(e);
+                
+                currentRectElement = document.createElement('div');
+                currentRectElement.className = 'rect-annotation';
+                currentRectElement.style.backgroundColor = currentRectColor;
+                currentRectElement.style.left = `${startRectPoint.x}px`;
+                currentRectElement.style.top = `${startRectPoint.y}px`;
+                currentRectElement.style.width = '0px';
+                currentRectElement.style.height = '0px';
+                
+                attachDraggableEvents(currentRectElement, true);
+                textLayer.appendChild(currentRectElement);
             } else if (currentMode === 'TEXT') {
                 const coords = getCanvasCoords(e);
                 addTextAnnotation(coords.x, coords.y);
@@ -574,12 +607,85 @@
                 drawCtx.lineTo(coords.x, coords.y);
                 drawCtx.stroke();
                 lastDrawPoint = coords;
+            } else if (isDrawingRect && currentMode === 'RECT') {
+                e.preventDefault();
+                const coords = getCanvasCoords(e);
+                const x = Math.min(startRectPoint.x, coords.x);
+                const y = Math.min(startRectPoint.y, coords.y);
+                const w = Math.abs(coords.x - startRectPoint.x);
+                const h = Math.abs(coords.y - startRectPoint.y);
+                
+                currentRectElement.style.left = `${x}px`;
+                currentRectElement.style.top = `${y}px`;
+                currentRectElement.style.width = `${w}px`;
+                currentRectElement.style.height = `${h}px`;
             }
         }
 
         function handlePointerUp() {
             isPanning = isDrawing = false;
+            
+            if (isDrawingRect && currentRectElement) {
+                const w = parseFloat(currentRectElement.style.width);
+                const h = parseFloat(currentRectElement.style.height);
+                if (w < 5 || h < 5) {
+                    currentRectElement.remove(); // Evite les micro-clics
+                }
+            }
+            isDrawingRect = false;
+            currentRectElement = null;
+
             if (currentMode === 'MAIN') drawCanvas.style.cursor = 'grab';
+        }
+
+        function attachDraggableEvents(el, isRect = false) {
+            let isDragging = false, startPos = {x: 0, y: 0};
+            
+            const onDown = (e) => {
+                if ((currentMode !== 'TEXT' && currentMode !== 'RECT') && document.activeElement !== el) {
+                    isDragging = true;
+                    startPos = { x: e.clientX || e.touches[0].clientX, y: e.clientY || e.touches[0].clientY, left: parseFloat(el.style.left), top: parseFloat(el.style.top) };
+                    e.stopPropagation();
+                }
+            };
+
+            el.addEventListener('mousedown', onDown);
+            el.addEventListener('touchstart', (e) => { if (e.touches.length === 1) onDown(e); }, {passive: false});
+
+            const onMove = (e) => {
+                if (isDragging) {
+                    const clientX = e.clientX || e.touches[0].clientX;
+                    const clientY = e.clientY || e.touches[0].clientY;
+                    el.style.left = `${startPos.left + (clientX - startPos.x) / transform.scale}px`;
+                    el.style.top = `${startPos.top + (clientY - startPos.y) / transform.scale}px`;
+                }
+            };
+
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('touchmove', (e) => { if(isDragging) { e.preventDefault(); onMove(e); } }, {passive: false});
+
+            window.addEventListener('mouseup', () => isDragging = false);
+            window.addEventListener('touchend', () => isDragging = false);
+
+            // Double clic / tap pour supprimer
+            let lastTap = 0;
+            const handleDelete = (e) => {
+                e.preventDefault(); e.stopPropagation();
+                el.remove();
+            };
+            el.addEventListener('dblclick', handleDelete);
+            el.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 500 && tapLength > 0) {
+                    handleDelete(e);
+                }
+                lastTap = currentTime;
+            });
+
+            if (!isRect) {
+                el.addEventListener('blur', () => { if (el.innerText.trim() === '') el.remove(); });
+            }
         }
 
         function addTextAnnotation(x, y) {
@@ -590,41 +696,12 @@
             div.style.top = `${y}px`;
             div.style.fontSize = `${currentTextSize * RENDER_SCALE}px`;
             
-            let isDraggingText = false, startTextPos = {x: 0, y: 0};
-            
-            const onDown = (e) => {
-                if (currentMode !== 'TEXT' && document.activeElement !== div) {
-                    isDraggingText = true;
-                    startTextPos = { x: e.clientX || e.touches[0].clientX, y: e.clientY || e.touches[0].clientY, left: parseFloat(div.style.left), top: parseFloat(div.style.top) };
-                    e.stopPropagation();
-                }
-            };
-
-            div.addEventListener('mousedown', onDown);
-            div.addEventListener('touchstart', (e) => { if (e.touches.length === 1) onDown(e); }, {passive: false});
-
-            const onMove = (e) => {
-                if (isDraggingText) {
-                    const clientX = e.clientX || e.touches[0].clientX;
-                    const clientY = e.clientY || e.touches[0].clientY;
-                    div.style.left = `${startTextPos.left + (clientX - startTextPos.x) / transform.scale}px`;
-                    div.style.top = `${startTextPos.top + (clientY - startTextPos.y) / transform.scale}px`;
-                }
-            };
-
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('touchmove', (e) => { if(isDraggingText) { e.preventDefault(); onMove(e); } }, {passive: false});
-
-            window.addEventListener('mouseup', () => isDraggingText = false);
-            window.addEventListener('touchend', () => isDraggingText = false);
-
-            div.addEventListener('blur', () => { if (div.innerText.trim() === '') div.remove(); });
-
+            attachDraggableEvents(div, false);
             textLayer.appendChild(div);
             setTimeout(() => div.focus(), 50);
         }
 
-        // Export Multi-pages Asynchrone
+        // Export Multi-pages
         document.getElementById('export-btn').addEventListener('click', async () => {
             if(!pdfDoc) return;
             const btn = document.getElementById('export-btn');
@@ -633,7 +710,6 @@
             loader.innerText = "Exportation en cours, veuillez patienter...";
             loader.style.display = 'block';
 
-            // Sauvegarder la page actuelle avant export
             saveCurrentPageData();
 
             try {
@@ -652,12 +728,11 @@
                     finalCtx.fillStyle = 'white';
                     finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-                    // Dessiner PDF
                     await page.render({ canvasContext: finalCtx, viewport: viewport }).promise;
                     
                     const pData = pagesData[i];
                     
-                    // Dessiner les traits
+                    // 1. Appliquer Dessin
                     if (pData && pData.drawingDataUrl) {
                         await new Promise((resolve) => {
                             const img = new Image();
@@ -666,23 +741,30 @@
                         });
                     }
                     
-                    // Dessiner le texte
+                    // 2. Appliquer Elements du DOM (Textes & Rectangles)
                     if (pData && pData.textElements) {
-                        pData.textElements.forEach(txt => {
-                            const x = parseFloat(txt.style.left);
-                            const y = parseFloat(txt.style.top);
-                            const fontSize = parseFloat(txt.style.fontSize);
-                            
-                            finalCtx.font = `${fontSize}px Arial`;
-                            finalCtx.fillStyle = 'black';
-                            finalCtx.textBaseline = 'top';
-                            
-                            const lines = txt.innerText.split('\n');
-                            let currentY = y + 4;
-                            lines.forEach(line => {
-                                finalCtx.fillText(line, x + 4, currentY);
-                                currentY += fontSize * 1.2;
-                            });
+                        pData.textElements.forEach(el => {
+                            const x = parseFloat(el.style.left);
+                            const y = parseFloat(el.style.top);
+
+                            if (el.className.includes('rect-annotation')) {
+                                const w = parseFloat(el.style.width);
+                                const h = parseFloat(el.style.height);
+                                finalCtx.fillStyle = el.style.backgroundColor;
+                                finalCtx.fillRect(x, y, w, h);
+                            } else {
+                                const fontSize = parseFloat(el.style.fontSize);
+                                finalCtx.font = `${fontSize}px Arial`;
+                                finalCtx.fillStyle = 'black';
+                                finalCtx.textBaseline = 'top';
+                                
+                                const lines = el.innerText.split('\n');
+                                let currentY = y + 4;
+                                lines.forEach(line => {
+                                    finalCtx.fillText(line, x + 4, currentY);
+                                    currentY += fontSize * 1.2;
+                                });
+                            }
                         });
                     }
 
@@ -704,7 +786,6 @@
                 console.error("Erreur d'export:", e);
                 alert("Une erreur est survenue lors de l'exportation.");
             } finally {
-                // Restaurer la vue de la page courante
                 restoreCurrentPageData();
                 btn.innerText = "Exporter PDF";
                 btn.disabled = false;
