@@ -2,31 +2,85 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <!-- Configuration mobile-friendly, empêche le zoom natif du navigateur -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FillYourPDF Document</title>
     
-    <!-- pdf.js pour le rendu du PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- jsPDF pour l'export final -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
-        /* Base UI minimaliste */
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background-color: #f3f4f6; /* Gris clair neutre */
+            background-color: #f3f4f6;
             font-family: Arial, sans-serif;
-            touch-action: none; /* Désactive les gestes par défaut du navigateur (pull to refresh, etc) */
+            touch-action: none;
         }
+
+        /* Navigation en haut */
+        #page-nav {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            gap: 10px;
+            z-index: 20;
+        }
+
+        #page-nav button {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+            background: transparent;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        #page-nav button:hover:not(:disabled) { background: #e5e7eb; }
+        #page-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .page-info {
+            font-size: 14px;
+            font-weight: bold;
+            color: #4b5563;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #page-input {
+            width: 40px;
+            text-align: center;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            background: #f9fafb;
+        }
+        
+        #page-input::-webkit-outer-spin-button, #page-input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+        #page-input[type=number] { -moz-appearance: textfield; }
 
         #app-container {
             width: 100%;
-            height: calc(100% - 60px); /* Laisse 60px pour la toolbar en bas */
+            height: calc(100% - 60px);
             position: relative;
             overflow: hidden;
         }
@@ -34,17 +88,15 @@
         #workspace {
             position: absolute;
             transform-origin: 0 0;
-            /* Transform (pan/zoom) appliqué en JS */
         }
 
         .page-container {
             position: relative;
             background: white;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            margin: 20px; /* Marge autour du document */
+            margin: 20px;
         }
 
-        /* Les canvas et le calque texte sont superposés parfaitement */
         canvas {
             display: block;
             position: absolute;
@@ -62,13 +114,12 @@
             width: 100%;
             height: 100%;
             z-index: 3;
-            pointer-events: none; /* Les clics passent à travers sauf sur le texte lui-même */
+            pointer-events: none;
         }
 
-        /* Style des zones de texte ajoutées */
         .text-annotation {
             position: absolute;
-            pointer-events: auto; /* Rend le texte cliquable/éditable */
+            pointer-events: auto;
             border: 1px dashed transparent;
             padding: 4px;
             min-width: 20px;
@@ -83,11 +134,11 @@
         }
 
         .text-annotation:focus, .text-annotation:hover {
-            border-color: #3b82f6; /* Bleu quand actif */
+            border-color: #3b82f6;
             background: rgba(255, 255, 255, 0.7);
         }
 
-        /* Toolbar en bas */
+        /* Toolbar */
         #toolbar {
             position: fixed;
             bottom: 0;
@@ -103,7 +154,7 @@
             z-index: 10;
         }
 
-        button {
+        .tool-btn {
             border: none;
             background: #f3f4f6;
             border-radius: 12px;
@@ -118,15 +169,9 @@
             color: #4b5563;
         }
 
-        button:hover { background: #e5e7eb; }
-        
-        /* Bouton actif */
-        button.active {
-            background: #3b82f6;
-            color: white;
-        }
+        .tool-btn:hover { background: #e5e7eb; }
+        .tool-btn.active { background: #3b82f6; color: white; }
 
-        /* Menus d'options (tailles) */
         .tool-options {
             display: none;
             position: fixed;
@@ -146,6 +191,12 @@
             height: 36px;
             font-size: 14px;
             border: 2px solid transparent;
+            background: #f3f4f6;
+            cursor: pointer;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .option-btn.active {
@@ -153,7 +204,6 @@
             background: #eff6ff;
         }
 
-        /* Bouton Export spécial */
         #export-btn {
             width: auto;
             padding: 0 20px;
@@ -162,11 +212,16 @@
             background: #10b981;
             color: white;
             margin-left: 20px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            height: 48px;
+            transition: 0.2s;
         }
 
-        #export-btn:hover { background: #059669; }
+        #export-btn:hover:not(:disabled) { background: #059669; }
+        #export-btn:disabled { opacity: 0.5; cursor: wait; }
 
-        /* Loader */
         #loader {
             position: fixed;
             top: 50%;
@@ -174,14 +229,25 @@
             transform: translate(-50%, -50%);
             font-size: 18px;
             font-weight: bold;
-            color: #4b5563;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 15px 30px;
+            border-radius: 20px;
             z-index: 100;
         }
     </style>
 </head>
 <body>
 
-    <div id="loader">Chargement du document...</div>
+    <div id="loader">Chargement...</div>
+
+    <div id="page-nav" style="display: none;">
+        <button id="btn-prev-page" title="Page Précédente">◀</button>
+        <div class="page-info">
+            <input type="number" id="page-input" value="1" min="1"> / <span id="page-total">-</span>
+        </div>
+        <button id="btn-next-page" title="Page Suivante">▶</button>
+    </div>
 
     <div id="app-container">
         <div id="workspace">
@@ -193,7 +259,6 @@
         </div>
     </div>
 
-    <!-- Sélecteurs de tailles de stylo -->
     <div id="pen-options" class="tool-options" style="left: calc(50% - 110px);">
         <button class="option-btn active" data-size="2" style="border-radius: 50%;">
             <div style="width: 4px; height: 4px; background: currentColor; border-radius: 50%;"></div>
@@ -206,7 +271,6 @@
         </button>
     </div>
 
-    <!-- Sélecteurs de tailles de texte -->
     <div id="text-options" class="tool-options" style="left: calc(50% - 50px);">
         <button class="option-btn" data-size="12">P</button>
         <button class="option-btn active" data-size="18">M</button>
@@ -214,31 +278,35 @@
     </div>
 
     <div id="toolbar">
-        <button id="btn-main" class="active" title="Main (Déplacer/Zoomer)">✋</button>
-        <button id="btn-pen" title="Stylo (Dessiner)">✏️</button>
-        <button id="btn-text" title="Texte">T</button>
-        <button id="export-btn">Exporter en PDF</button>
+        <button id="btn-main" class="tool-btn active" title="Main (Déplacer/Zoomer)">✋</button>
+        <button id="btn-pen" class="tool-btn" title="Stylo (Dessiner)">✏️</button>
+        <button id="btn-text" class="tool-btn" title="Texte">T</button>
+        <button id="export-btn">Exporter PDF</button>
     </div>
 
-    <!-- Conteneur des données PDF injectées par le script Node -->
     <script id="pdf-data" type="text/plain">{{PDF_BASE64}}</script>
 
     <script>
-        // Configuration de base pour pdf.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // Variables d'état
+        // Variables d'état Global
         let currentMode = 'MAIN'; // 'MAIN', 'PEN', 'TEXT'
         let currentPenSize = 2;
         let currentTextSize = 18;
         
         let transform = { scale: 1, x: 0, y: 0 };
-        let isPanning = false;
-        let startPan = { x: 0, y: 0 };
-        let isDrawing = false;
-        let lastDrawPoint = null;
+        let isPanning = false, startPan = { x: 0, y: 0 };
+        let isDrawing = false, lastDrawPoint = null;
 
-        // Éléments du DOM
+        // Variables Multi-pages
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let pagesData = []; // Stockage virtuel : { drawingDataUrl: str, textElements: [DOMElement] }
+
+        const RENDER_SCALE = 2.0;
+
+        // DOM
         const appContainer = document.getElementById('app-container');
         const workspace = document.getElementById('workspace');
         const pageContainer = document.getElementById('page-container');
@@ -250,36 +318,63 @@
         const pdfCtx = pdfCanvas.getContext('2d');
         const drawCtx = drawCanvas.getContext('2d');
 
-        // Qualité de rendu (2 = rendu HD "retina")
-        const RENDER_SCALE = 2.0;
-
-        /**
-         * Initialisation du document PDF
-         */
         async function init() {
             const base64Data = document.getElementById('pdf-data').textContent.trim();
             
             if (!base64Data || base64Data === '{{PDF_BASE64}}') {
-                loader.innerText = "Mode Dev : Aucun PDF injecté. Espace de travail vide.";
-                setupCanvas(1000, 1400); // Taille A4 standard approx
+                loader.innerText = "Mode Dev : Aucun PDF injecté.";
+                setupCanvas(1000, 1400);
                 centerDocument();
                 return;
             }
 
             try {
-                // Conversion Base64 -> Uint8Array
                 const binaryString = window.atob(base64Data);
                 const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
+                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+
+                pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+                totalPages = pdfDoc.numPages;
+                
+                // Configurer la UI multi-pages
+                document.getElementById('page-total').innerText = totalPages;
+                document.getElementById('page-input').max = totalPages;
+                document.getElementById('page-nav').style.display = totalPages > 1 ? 'flex' : 'none';
+
+                // Initialiser le stockage
+                for (let i = 1; i <= totalPages; i++) {
+                    pagesData[i] = { drawingDataUrl: null, textElements: [] };
                 }
 
-                // Chargement via pdf.js
-                const pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
-                const pdfPage = await pdfDoc.getPage(1); // Prototype : on prend la première page
-                
-                // Rendu de la page
+                await loadPage(1);
+
+            } catch (err) {
+                console.error("Erreur chargement PDF:", err);
+                loader.innerText = "Erreur de chargement du PDF.";
+            }
+        }
+
+        async function loadPage(pageNum) {
+            if (pageNum < 1 || pageNum > totalPages) return;
+            
+            loader.style.display = 'block';
+            
+            // Sauvegarder l'état de la page actuelle (si ce n'est pas le tout premier chargement)
+            if (pdfDoc && drawCanvas.width > 0) {
+                saveCurrentPageData();
+            }
+
+            currentPage = pageNum;
+            
+            // UI
+            document.getElementById('page-input').value = currentPage;
+            document.getElementById('btn-prev-page').disabled = currentPage === 1;
+            document.getElementById('btn-next-page').disabled = currentPage === totalPages;
+
+            try {
+                const pdfPage = await pdfDoc.getPage(currentPage);
                 const viewport = pdfPage.getViewport({ scale: RENDER_SCALE });
+
                 setupCanvas(viewport.width, viewport.height);
 
                 await pdfPage.render({
@@ -287,59 +382,77 @@
                     viewport: viewport
                 }).promise;
 
-                loader.style.display = 'none'; // Cacher le loader
+                restoreCurrentPageData();
                 centerDocument();
+                loader.style.display = 'none';
 
             } catch (err) {
-                console.error("Erreur au chargement du PDF:", err);
-                loader.innerText = "Erreur de chargement du PDF.";
+                console.error("Erreur page:", err);
             }
         }
 
-        /**
-         * Prépare les canvas à la bonne dimension
-         */
+        function saveCurrentPageData() {
+            // Un canevas vide en DataURL fait quelques centaines d'octets.
+            // On le capture dans tous les cas pour simplifier la logique.
+            pagesData[currentPage].drawingDataUrl = drawCanvas.toDataURL();
+            
+            // Stocker les DOMElements sans les détruire pour garder les événements (drag, focus)
+            pagesData[currentPage].textElements = Array.from(textLayer.children);
+            textLayer.innerHTML = '';
+        }
+
+        function restoreCurrentPageData() {
+            drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+            textLayer.innerHTML = '';
+
+            const data = pagesData[currentPage];
+            
+            if (data.drawingDataUrl) {
+                const img = new Image();
+                img.onload = () => drawCtx.drawImage(img, 0, 0);
+                img.src = data.drawingDataUrl;
+            }
+
+            if (data.textElements.length > 0) {
+                data.textElements.forEach(el => textLayer.appendChild(el));
+            }
+        }
+
+        // Navigation UI
+        document.getElementById('btn-prev-page').addEventListener('click', () => loadPage(currentPage - 1));
+        document.getElementById('btn-next-page').addEventListener('click', () => loadPage(currentPage + 1));
+        
+        document.getElementById('page-input').addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > totalPages) val = totalPages;
+            e.target.value = val;
+            if (val !== currentPage) loadPage(val);
+        });
+
         function setupCanvas(w, h) {
             pageContainer.style.width = `${w}px`;
             pageContainer.style.height = `${h}px`;
-            
-            pdfCanvas.width = w;
-            pdfCanvas.height = h;
-            
-            drawCanvas.width = w;
-            drawCanvas.height = h;
-            
-            // Config du contexte de dessin
+            pdfCanvas.width = w; pdfCanvas.height = h;
+            drawCanvas.width = w; drawCanvas.height = h;
             drawCtx.lineCap = 'round';
             drawCtx.lineJoin = 'round';
-            drawCtx.strokeStyle = 'black'; // Couleur unique pour le minimalisme
+            drawCtx.strokeStyle = 'black';
         }
 
-        /**
-         * Centre et ajuste le zoom du document à l'écran
-         */
         function centerDocument() {
             const rect = appContainer.getBoundingClientRect();
-            // Zoom pour voir toute la page avec une marge
-            transform.scale = Math.min(
-                (rect.width - 40) / pdfCanvas.width, 
-                (rect.height - 40) / pdfCanvas.height
-            );
+            transform.scale = Math.min((rect.width - 40) / pdfCanvas.width, (rect.height - 40) / pdfCanvas.height);
             transform.x = (rect.width - pdfCanvas.width * transform.scale) / 2;
             transform.y = (rect.height - pdfCanvas.height * transform.scale) / 2;
             updateTransform();
         }
 
-        /**
-         * Applique le Pan/Zoom via CSS Transform
-         */
         function updateTransform() {
             workspace.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
         }
 
-        /**
-         * Gestion de l'UI (Toolbar)
-         */
+        // Toolbar UI
         document.getElementById('btn-main').addEventListener('click', () => setMode('MAIN'));
         document.getElementById('btn-pen').addEventListener('click', () => setMode('PEN'));
         document.getElementById('btn-text').addEventListener('click', () => setMode('TEXT'));
@@ -362,137 +475,85 @@
 
         function setMode(mode) {
             currentMode = mode;
-            // Maj visuelle des boutons
-            document.getElementById('btn-main').classList.toggle('active', mode === 'MAIN');
-            document.getElementById('btn-pen').classList.toggle('active', mode === 'PEN');
-            document.getElementById('btn-text').classList.toggle('active', mode === 'TEXT');
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(mode === 'MAIN' ? 'btn-main' : mode === 'PEN' ? 'btn-pen' : 'btn-text').classList.add('active');
             
-            // Menus d'options
             document.getElementById('pen-options').classList.toggle('visible', mode === 'PEN');
             document.getElementById('text-options').classList.toggle('visible', mode === 'TEXT');
 
-            // Curseur du canvas
-            if (mode === 'MAIN') drawCanvas.style.cursor = 'grab';
-            else if (mode === 'PEN') drawCanvas.style.cursor = 'crosshair';
-            else if (mode === 'TEXT') drawCanvas.style.cursor = 'text';
+            drawCanvas.style.cursor = mode === 'MAIN' ? 'grab' : mode === 'PEN' ? 'crosshair' : 'text';
         }
-        setMode('MAIN');
 
-        /**
-         * Gestion de la souris / Touch pour le zoom (Molette & Pinch)
-         */
+        // Zoom / Pan events
         appContainer.addEventListener('wheel', (e) => {
             e.preventDefault();
             if (e.ctrlKey || e.metaKey || currentMode === 'MAIN') {
-                // Zoom
-                const zoomIntensity = 0.002;
-                const wheel = e.deltaY < 0 ? 1 : -1;
-                const zoomFactor = Math.exp(wheel * zoomIntensity * 20);
-                
+                const zoomFactor = Math.exp((e.deltaY < 0 ? 1 : -1) * 0.002 * 20);
                 const rect = appContainer.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-
-                // Zoom vers le curseur
+                const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
                 transform.x = mouseX - (mouseX - transform.x) * zoomFactor;
                 transform.y = mouseY - (mouseY - transform.y) * zoomFactor;
-                transform.scale *= zoomFactor;
-                
-                // Limites du zoom
-                transform.scale = Math.max(0.1, Math.min(transform.scale, 5));
+                transform.scale = Math.max(0.1, Math.min(transform.scale * zoomFactor, 5));
                 updateTransform();
             } else {
-                // Pan avec le trackpad
                 transform.x -= e.deltaX;
                 transform.y -= e.deltaY;
                 updateTransform();
             }
         }, { passive: false });
 
-        /**
-         * Logique d'interaction sur le canvas (Dessin & Drag)
-         */
         function getCanvasCoords(e) {
             const rect = drawCanvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            // On divise par le scale pour avoir les coords exactes sur le canvas d'origine (non zoomé)
-            return {
-                x: (clientX - rect.left) / transform.scale,
-                y: (clientY - rect.top) / transform.scale
-            };
+            return { x: (clientX - rect.left) / transform.scale, y: (clientY - rect.top) / transform.scale };
         }
 
-        let initialPinchDistance = null;
-        let initialScale = 1;
+        let initialPinchDist = null, initialScale = 1;
 
-        // Events de début (mousedown/touchstart)
         drawCanvas.addEventListener('mousedown', handlePointerDown);
         drawCanvas.addEventListener('touchstart', (e) => {
             if (e.touches.length === 2) {
-                // Pinch to zoom (2 doigts)
-                isDrawing = false;
-                isPanning = false;
-                initialPinchDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                isDrawing = isPanning = false;
+                initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 initialScale = transform.scale;
-            } else if (e.touches.length === 1) {
-                handlePointerDown(e);
-            }
+            } else if (e.touches.length === 1) handlePointerDown(e);
         }, { passive: false });
 
-        // Events de mouvement
         window.addEventListener('mousemove', handlePointerMove);
         window.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2 && initialPinchDistance) {
+            if (e.touches.length === 2 && initialPinchDist) {
                 e.preventDefault();
-                const currentDistance = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
-                const pinchScale = currentDistance / initialPinchDistance;
-                transform.scale = initialScale * pinchScale;
-                transform.scale = Math.max(0.1, Math.min(transform.scale, 5));
+                const currentDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                transform.scale = Math.max(0.1, Math.min(initialScale * (currentDist / initialPinchDist), 5));
                 updateTransform();
-            } else if (e.touches.length === 1) {
-                handlePointerMove(e);
-            }
+            } else if (e.touches.length === 1) handlePointerMove(e);
         }, { passive: false });
 
-        // Events de fin
         window.addEventListener('mouseup', handlePointerUp);
         window.addEventListener('touchend', (e) => {
-            if (e.touches.length < 2) initialPinchDistance = null;
+            if (e.touches.length < 2) initialPinchDist = null;
             handlePointerUp(e);
         });
 
         function handlePointerDown(e) {
             if (currentMode === 'MAIN' || e.button === 1 || e.button === 2) {
-                // Début du Pan
                 isPanning = true;
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 startPan = { x: clientX - transform.x, y: clientY - transform.y };
                 if (currentMode === 'MAIN') drawCanvas.style.cursor = 'grabbing';
-            } 
-            else if (currentMode === 'PEN') {
-                // Début du dessin
+            } else if (currentMode === 'PEN') {
                 isDrawing = true;
                 lastDrawPoint = getCanvasCoords(e);
-                
-                // Dessine un point unique si simple clic
-                drawCtx.lineWidth = currentPenSize * RENDER_SCALE; // Ajuste la taille selon le scale du canvas
+                drawCtx.lineWidth = currentPenSize * RENDER_SCALE;
                 drawCtx.beginPath();
                 drawCtx.arc(lastDrawPoint.x, lastDrawPoint.y, (currentPenSize * RENDER_SCALE) / 2, 0, Math.PI * 2);
                 drawCtx.fill();
-            } 
-            else if (currentMode === 'TEXT') {
-                // Ajout de texte
+            } else if (currentMode === 'TEXT') {
                 const coords = getCanvasCoords(e);
                 addTextAnnotation(coords.x, coords.y);
-                setMode('MAIN'); // Repasse en main direct pour éviter d'en spammer
+                setMode('MAIN');
             }
         }
 
@@ -504,8 +565,7 @@
                 transform.x = clientX - startPan.x;
                 transform.y = clientY - startPan.y;
                 updateTransform();
-            } 
-            else if (isDrawing && currentMode === 'PEN') {
+            } else if (isDrawing && currentMode === 'PEN') {
                 e.preventDefault();
                 const coords = getCanvasCoords(e);
                 drawCtx.lineWidth = currentPenSize * RENDER_SCALE;
@@ -518,161 +578,141 @@
         }
 
         function handlePointerUp() {
-            isPanning = false;
-            isDrawing = false;
+            isPanning = isDrawing = false;
             if (currentMode === 'MAIN') drawCanvas.style.cursor = 'grab';
         }
 
-        /**
-         * Gestion des zones de texte
-         */
         function addTextAnnotation(x, y) {
             const div = document.createElement('div');
             div.className = 'text-annotation';
             div.contentEditable = true;
             div.style.left = `${x}px`;
             div.style.top = `${y}px`;
-            
-            // On ajuste la taille de la police au RENDER_SCALE du canvas
             div.style.fontSize = `${currentTextSize * RENDER_SCALE}px`;
             
-            // Variables pour le drag & drop du texte
-            let isDraggingText = false;
-            let startTextPos = {x: 0, y: 0};
+            let isDraggingText = false, startTextPos = {x: 0, y: 0};
             
-            div.addEventListener('mousedown', (e) => {
+            const onDown = (e) => {
                 if (currentMode !== 'TEXT' && document.activeElement !== div) {
                     isDraggingText = true;
-                    startTextPos = {
-                        x: e.clientX,
-                        y: e.clientY,
-                        left: parseFloat(div.style.left),
-                        top: parseFloat(div.style.top)
-                    };
-                    e.stopPropagation(); // Évite que le canvas prenne le focus/pan
-                }
-            });
-
-            // Touch support pour déplacer le texte
-            div.addEventListener('touchstart', (e) => {
-                if (currentMode !== 'TEXT' && document.activeElement !== div && e.touches.length === 1) {
-                    isDraggingText = true;
-                    startTextPos = {
-                        x: e.touches[0].clientX,
-                        y: e.touches[0].clientY,
-                        left: parseFloat(div.style.left),
-                        top: parseFloat(div.style.top)
-                    };
+                    startTextPos = { x: e.clientX || e.touches[0].clientX, y: e.clientY || e.touches[0].clientY, left: parseFloat(div.style.left), top: parseFloat(div.style.top) };
                     e.stopPropagation();
                 }
-            }, {passive: false});
+            };
 
-            window.addEventListener('mousemove', handleTextMove);
-            window.addEventListener('touchmove', (e) => {
-                if(isDraggingText) {
-                    e.preventDefault();
-                    handleTextMove({clientX: e.touches[0].clientX, clientY: e.touches[0].clientY});
-                }
-            }, {passive: false});
+            div.addEventListener('mousedown', onDown);
+            div.addEventListener('touchstart', (e) => { if (e.touches.length === 1) onDown(e); }, {passive: false});
 
-            function handleTextMove(e) {
+            const onMove = (e) => {
                 if (isDraggingText) {
-                    const dx = (e.clientX - startTextPos.x) / transform.scale;
-                    const dy = (e.clientY - startTextPos.y) / transform.scale;
-                    div.style.left = `${startTextPos.left + dx}px`;
-                    div.style.top = `${startTextPos.top + dy}px`;
+                    const clientX = e.clientX || e.touches[0].clientX;
+                    const clientY = e.clientY || e.touches[0].clientY;
+                    div.style.left = `${startTextPos.left + (clientX - startTextPos.x) / transform.scale}px`;
+                    div.style.top = `${startTextPos.top + (clientY - startTextPos.y) / transform.scale}px`;
                 }
-            }
+            };
+
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('touchmove', (e) => { if(isDraggingText) { e.preventDefault(); onMove(e); } }, {passive: false});
 
             window.addEventListener('mouseup', () => isDraggingText = false);
             window.addEventListener('touchend', () => isDraggingText = false);
 
-            // Supprime la div si elle est vide à la perte de focus
-            div.addEventListener('blur', () => {
-                if (div.innerText.trim() === '') {
-                    div.remove();
-                }
-            });
+            div.addEventListener('blur', () => { if (div.innerText.trim() === '') div.remove(); });
 
             textLayer.appendChild(div);
-            
-            // Met le curseur dedans directement
             setTimeout(() => div.focus(), 50);
         }
 
-        /**
-         * Export Final : Combinaison de tout (PDF + Traits + Texte) en un nouveau PDF
-         */
-        document.getElementById('export-btn').addEventListener('click', () => {
+        // Export Multi-pages Asynchrone
+        document.getElementById('export-btn').addEventListener('click', async () => {
+            if(!pdfDoc) return;
             const btn = document.getElementById('export-btn');
-            const originalText = btn.innerText;
             btn.innerText = "Génération...";
             btn.disabled = true;
+            loader.innerText = "Exportation en cours, veuillez patienter...";
+            loader.style.display = 'block';
 
-            setTimeout(() => {
-                try {
-                    const { jsPDF } = window.jspdf;
+            // Sauvegarder la page actuelle avant export
+            saveCurrentPageData();
+
+            try {
+                const { jsPDF } = window.jspdf;
+                let pdf = null;
+
+                for (let i = 1; i <= totalPages; i++) {
+                    const page = await pdfDoc.getPage(i);
+                    const viewport = page.getViewport({ scale: RENDER_SCALE });
                     
-                    // On crée un canvas offscreen pour fusionner tous les calques
                     const finalCanvas = document.createElement('canvas');
-                    finalCanvas.width = pdfCanvas.width;
-                    finalCanvas.height = pdfCanvas.height;
+                    finalCanvas.width = viewport.width;
+                    finalCanvas.height = viewport.height;
                     const finalCtx = finalCanvas.getContext('2d');
                     
-                    // 1. Fond blanc au cas où
                     finalCtx.fillStyle = 'white';
                     finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-                    // 2. Le PDF d'origine
-                    finalCtx.drawImage(pdfCanvas, 0, 0);
+                    // Dessiner PDF
+                    await page.render({ canvasContext: finalCtx, viewport: viewport }).promise;
                     
-                    // 3. Les traits de stylo
-                    finalCtx.drawImage(drawCanvas, 0, 0);
+                    const pData = pagesData[i];
                     
-                    // 4. Les textes HTML -> dessinés sur le canvas
-                    const texts = document.querySelectorAll('.text-annotation');
-                    texts.forEach(txt => {
-                        const x = parseFloat(txt.style.left);
-                        const y = parseFloat(txt.style.top);
-                        const fontSize = parseFloat(txt.style.fontSize); // Déjà scale
-                        
-                        finalCtx.font = `${fontSize}px Arial`;
-                        finalCtx.fillStyle = 'black';
-                        finalCtx.textBaseline = 'top';
-                        
-                        // Gestion basique des sauts de ligne
-                        const lines = txt.innerText.split('\n');
-                        let currentY = y + 4; // petit padding
-                        lines.forEach(line => {
-                            finalCtx.fillText(line, x + 4, currentY); // +4 = padding de la div
-                            currentY += fontSize * 1.2; // interligne
+                    // Dessiner les traits
+                    if (pData && pData.drawingDataUrl) {
+                        await new Promise((resolve) => {
+                            const img = new Image();
+                            img.onload = () => { finalCtx.drawImage(img, 0, 0); resolve(); };
+                            img.src = pData.drawingDataUrl;
                         });
-                    });
+                    }
+                    
+                    // Dessiner le texte
+                    if (pData && pData.textElements) {
+                        pData.textElements.forEach(txt => {
+                            const x = parseFloat(txt.style.left);
+                            const y = parseFloat(txt.style.top);
+                            const fontSize = parseFloat(txt.style.fontSize);
+                            
+                            finalCtx.font = `${fontSize}px Arial`;
+                            finalCtx.fillStyle = 'black';
+                            finalCtx.textBaseline = 'top';
+                            
+                            const lines = txt.innerText.split('\n');
+                            let currentY = y + 4;
+                            lines.forEach(line => {
+                                finalCtx.fillText(line, x + 4, currentY);
+                                currentY += fontSize * 1.2;
+                            });
+                        });
+                    }
 
-                    // 5. Génération jsPDF
-                    // On exporte en haute qualité JPEG
                     const imgData = finalCanvas.toDataURL('image/jpeg', 0.95);
+                    const orientation = finalCanvas.width > finalCanvas.height ? 'l' : 'p';
                     
-                    // Choix de l'orientation (portrait / paysage)
-                    const orientation = pdfCanvas.width > pdfCanvas.height ? 'l' : 'p';
+                    if (!pdf) {
+                        pdf = new jsPDF(orientation, 'px', [finalCanvas.width, finalCanvas.height]);
+                    } else {
+                        pdf.addPage([finalCanvas.width, finalCanvas.height], orientation);
+                    }
                     
-                    // On crée le PDF aux dimensions du canvas (en pixels/points jsPDF)
-                    const pdf = new jsPDF(orientation, 'px', [pdfCanvas.width, pdfCanvas.height]);
-                    
-                    pdf.addImage(imgData, 'JPEG', 0, 0, pdfCanvas.width, pdfCanvas.height);
-                    pdf.save('document_annote.pdf');
-
-                } catch (e) {
-                    console.error("Erreur d'export:", e);
-                    alert("Une erreur est survenue lors de l'exportation.");
-                } finally {
-                    btn.innerText = originalText;
-                    btn.disabled = false;
+                    pdf.addImage(imgData, 'JPEG', 0, 0, finalCanvas.width, finalCanvas.height);
                 }
-            }, 100); // Laisse le temps à l'UI de s'actualiser
+
+                pdf.save('document_annote.pdf');
+
+            } catch (e) {
+                console.error("Erreur d'export:", e);
+                alert("Une erreur est survenue lors de l'exportation.");
+            } finally {
+                // Restaurer la vue de la page courante
+                restoreCurrentPageData();
+                btn.innerText = "Exporter PDF";
+                btn.disabled = false;
+                loader.style.display = 'none';
+                loader.innerText = "Chargement...";
+            }
         });
 
-        // Lancement au démarrage
         window.addEventListener('load', init);
     </script>
 </body>
