@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FillYourPDF Document</title>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
+
     <style>
-        body, html {
+        body,
+        html {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -27,7 +29,7 @@
             left: 50%;
             transform: translateX(-50%);
             background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 20px;
             display: flex;
             align-items: center;
@@ -50,8 +52,14 @@
             transition: 0.2s;
         }
 
-        #page-nav button:hover:not(:disabled) { background: #e5e7eb; }
-        #page-nav button:disabled { opacity: 0.3; cursor: not-allowed; }
+        #page-nav button:hover:not(:disabled) {
+            background: #e5e7eb;
+        }
+
+        #page-nav button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
 
         .page-info {
             font-size: 14px;
@@ -72,11 +80,16 @@
             font-weight: bold;
             background: #f9fafb;
         }
-        
-        #page-input::-webkit-outer-spin-button, #page-input::-webkit-inner-spin-button {
-            -webkit-appearance: none; margin: 0;
+
+        #page-input::-webkit-outer-spin-button,
+        #page-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
-        #page-input[type=number] { -moz-appearance: textfield; }
+
+        #page-input[type=number] {
+            -moz-appearance: textfield;
+        }
 
         #app-container {
             width: 100%;
@@ -93,7 +106,7 @@
         .page-container {
             position: relative;
             background: white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             margin: 20px;
         }
 
@@ -104,9 +117,14 @@
             left: 0;
         }
 
-        #pdf-canvas { z-index: 1; }
-        #draw-canvas { z-index: 2; }
-        
+        #pdf-canvas {
+            z-index: 1;
+        }
+
+        #draw-canvas {
+            z-index: 2;
+        }
+
         #text-layer {
             position: absolute;
             top: 0;
@@ -117,10 +135,12 @@
             pointer-events: none;
         }
 
-        .text-annotation, .rect-annotation {
+        .text-annotation,
+        .rect-annotation {
             position: absolute;
             pointer-events: auto;
-            border: 2px dashed transparent; /* Bordure transparente par défaut pour focus */
+            border: 2px dashed transparent;
+            /* Bordure transparente par défaut pour focus */
             cursor: move;
         }
 
@@ -151,7 +171,7 @@
             left: 0;
             width: 100%;
             height: 60px;
-            box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -188,7 +208,10 @@
             transition: 0.2s;
             box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
         }
-        #btn-delete-element:hover { background: #fee2e2; }
+
+        #btn-delete-element:hover {
+            background: #fee2e2;
+        }
 
         .tool-btn {
             border: none;
@@ -205,8 +228,14 @@
             color: #4b5563;
         }
 
-        .tool-btn:hover { background: #e5e7eb; }
-        .tool-btn.active { background: #3b82f6; color: white; }
+        .tool-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .tool-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
 
         .tool-options {
             display: none;
@@ -215,12 +244,14 @@
             background: white;
             padding: 10px;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             gap: 8px;
             z-index: 10;
         }
 
-        .tool-options.visible { display: flex; }
+        .tool-options.visible {
+            display: flex;
+        }
 
         .option-btn {
             width: 36px;
@@ -255,8 +286,14 @@
             transition: 0.2s;
         }
 
-        #export-btn:hover:not(:disabled) { background: #059669; }
-        #export-btn:disabled { opacity: 0.5; cursor: wait; }
+        #export-btn:hover:not(:disabled) {
+            background: #059669;
+        }
+
+        #export-btn:disabled {
+            opacity: 0.5;
+            cursor: wait;
+        }
 
         #loader {
             position: fixed;
@@ -266,23 +303,24 @@
             font-size: 18px;
             font-weight: bold;
             color: white;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             padding: 15px 30px;
             border-radius: 20px;
             z-index: 100;
         }
     </style>
 </head>
+
 <body>
 
-    <div id="loader">Chargement...</div>
+    <div id="loader">loading...</div>
 
     <div id="page-nav" style="display: none;">
-        <button id="btn-prev-page" title="Page Précédente">◀</button>
+        <button id="btn-prev-page" title="Previous Page">◀</button>
         <div class="page-info">
             <input type="number" id="page-input" value="1" min="1"> / <span id="page-total">-</span>
         </div>
-        <button id="btn-next-page" title="Page Suivante">▶</button>
+        <button id="btn-next-page" title="Next Page">▶</button>
     </div>
 
     <div id="app-container">
@@ -337,12 +375,12 @@
 
     <!-- Toolbar Classique -->
     <div id="toolbar" class="bottom-bar">
-        <button id="btn-main" class="tool-btn active" title="Déplacer/Zoomer">✋</button>
-        <button id="btn-pen" class="tool-btn" title="Stylo">✏️</button>
-        <button id="btn-eraser" class="tool-btn" title="Gomme">🧽</button>
-        <button id="btn-text" class="tool-btn" title="Texte">T</button>
-        <button id="btn-rect" class="tool-btn" title="Masquer/Censurer">⬛</button>
-        <button id="export-btn">Exporter PDF</button>
+        <button id="btn-main" class="tool-btn active" title="Move/Zoom">✋</button>
+        <button id="btn-pen" class="tool-btn" title="Pen">✏️</button>
+        <button id="btn-eraser" class="tool-btn" title="Eraser">🧽</button>
+        <button id="btn-text" class="tool-btn" title="Text">T</button>
+        <button id="btn-rect" class="tool-btn" title="Hide/Redact">⬛</button>
+        <button id="export-btn">Export PDF</button>
     </div>
 
     <!-- Toolbar Poubelle -->
@@ -361,11 +399,11 @@
         let currentEraserSize = 20;
         let currentTextSize = 18;
         let currentRectColor = 'white';
-        
+
         let transform = { scale: 1, x: 0, y: 0 };
         let isPanning = false, startPan = { x: 0, y: 0 };
         let isDrawing = false, lastDrawPoint = null;
-        
+
         let isDrawingRect = false;
         let startRectPoint = null;
         let currentRectElement = null;
@@ -389,16 +427,16 @@
         const drawCanvas = document.getElementById('draw-canvas');
         const textLayer = document.getElementById('text-layer');
         const loader = document.getElementById('loader');
-        
+
         const pdfCtx = pdfCanvas.getContext('2d');
         const drawCtx = drawCanvas.getContext('2d');
 
         // --- INITIALISATION ---
         async function init() {
             const base64Data = document.getElementById('pdf-data').textContent.trim();
-            
+
             if (!base64Data || base64Data === '{{PDF_BASE64}}') {
-                loader.innerText = "Mode Dev : Aucun PDF injecté.";
+                loader.innerText = "Dev Mode: No PDF injected.";
                 setupCanvas(1000, 1400);
                 centerDocument();
                 return;
@@ -411,7 +449,7 @@
 
                 pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
                 totalPages = pdfDoc.numPages;
-                
+
                 document.getElementById('page-total').innerText = totalPages;
                 document.getElementById('page-input').max = totalPages;
                 document.getElementById('page-nav').style.display = totalPages > 1 ? 'flex' : 'none';
@@ -422,22 +460,22 @@
 
                 await loadPage(1);
             } catch (err) {
-                console.error("Erreur chargement PDF:", err);
-                loader.innerText = "Erreur de chargement du PDF.";
+                console.error("PDF load error:", err);
+                loader.innerText = "Error loading PDF.";
             }
         }
 
         // --- GESTION DES PAGES ---
         async function loadPage(pageNum) {
             if (pageNum < 1 || pageNum > totalPages) return;
-            
+
             loader.style.display = 'block';
             deselectElement(); // Enlever la sélection au changement de page
-            
+
             if (pdfDoc && drawCanvas.width > 0) saveCurrentPageData();
 
             currentPage = pageNum;
-            
+
             document.getElementById('page-input').value = currentPage;
             document.getElementById('btn-prev-page').disabled = currentPage === 1;
             document.getElementById('btn-next-page').disabled = currentPage === totalPages;
@@ -453,7 +491,7 @@
                 centerDocument();
                 loader.style.display = 'none';
             } catch (err) {
-                console.error("Erreur page:", err);
+                console.error("Page error:", err);
             }
         }
 
@@ -467,7 +505,7 @@
             drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
             textLayer.innerHTML = '';
             const data = pagesData[currentPage];
-            
+
             if (data.drawingDataUrl) {
                 const img = new Image();
                 img.onload = () => drawCtx.drawImage(img, 0, 0);
@@ -534,11 +572,11 @@
         function setMode(mode) {
             currentMode = mode;
             deselectElement(); // Enlever la sélection si on change d'outil
-            
+
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             const activeBtn = mode === 'MAIN' ? 'btn-main' : mode === 'PEN' ? 'btn-pen' : mode === 'ERASER' ? 'btn-eraser' : mode === 'TEXT' ? 'btn-text' : 'btn-rect';
             document.getElementById(activeBtn).classList.add('active');
-            
+
             document.getElementById('pen-options').classList.toggle('visible', mode === 'PEN');
             document.getElementById('eraser-options').classList.toggle('visible', mode === 'ERASER');
             document.getElementById('text-options').classList.toggle('visible', mode === 'TEXT');
@@ -585,7 +623,7 @@
             if (selectedElement && !e.target.classList.contains('text-annotation') && !e.target.classList.contains('rect-annotation')) {
                 deselectElement();
             }
-        }, {passive: false});
+        }, { passive: false });
 
         // --- INTERACTIONS DESSIN ET CANVAS ---
         appContainer.addEventListener('wheel', (e) => {
@@ -666,7 +704,7 @@
             } else if (currentMode === 'RECT') {
                 isDrawingRect = true;
                 startRectPoint = getCanvasCoords(e);
-                
+
                 currentRectElement = document.createElement('div');
                 currentRectElement.className = 'rect-annotation';
                 currentRectElement.style.backgroundColor = currentRectColor;
@@ -674,7 +712,7 @@
                 currentRectElement.style.top = `${startRectPoint.y}px`;
                 currentRectElement.style.width = '0px';
                 currentRectElement.style.height = '0px';
-                
+
                 attachDraggableEvents(currentRectElement, true);
                 textLayer.appendChild(currentRectElement);
             } else if (currentMode === 'TEXT') {
@@ -720,7 +758,7 @@
                 const y = Math.min(startRectPoint.y, coords.y);
                 const w = Math.abs(coords.x - startRectPoint.x);
                 const h = Math.abs(coords.y - startRectPoint.y);
-                
+
                 currentRectElement.style.left = `${x}px`;
                 currentRectElement.style.top = `${y}px`;
                 currentRectElement.style.width = `${w}px`;
@@ -730,7 +768,7 @@
 
         function handlePointerUp() {
             isPanning = isDrawing = false;
-            
+
             if (isDrawingRect && currentRectElement) {
                 const w = parseFloat(currentRectElement.style.width);
                 const h = parseFloat(currentRectElement.style.height);
@@ -748,8 +786,8 @@
 
         // --- GESTION DES OBJETS (DOM) ---
         function attachDraggableEvents(el, isRect = false) {
-            let isDragging = false, startPos = {x: 0, y: 0};
-            
+            let isDragging = false, startPos = { x: 0, y: 0 };
+
             const onDown = (e) => {
                 selectElement(el); // Sélection de l'élément au clic
                 e.stopPropagation(); // Empêcher de dessiner ou déselectionner en dessous
@@ -760,7 +798,7 @@
             };
 
             el.addEventListener('mousedown', onDown);
-            el.addEventListener('touchstart', (e) => { if (e.touches.length === 1) onDown(e); }, {passive: false});
+            el.addEventListener('touchstart', (e) => { if (e.touches.length === 1) onDown(e); }, { passive: false });
 
             const onMove = (e) => {
                 if (isDragging) {
@@ -772,7 +810,7 @@
             };
 
             window.addEventListener('mousemove', onMove);
-            window.addEventListener('touchmove', (e) => { if(isDragging) { e.preventDefault(); onMove(e); } }, {passive: false});
+            window.addEventListener('touchmove', (e) => { if (isDragging) { e.preventDefault(); onMove(e); } }, { passive: false });
 
             window.addEventListener('mouseup', () => isDragging = false);
             window.addEventListener('touchend', () => isDragging = false);
@@ -789,10 +827,10 @@
             div.style.left = `${x}px`;
             div.style.top = `${y}px`;
             div.style.fontSize = `${currentTextSize * RENDER_SCALE}px`;
-            
+
             attachDraggableEvents(div, false);
             textLayer.appendChild(div);
-            
+
             setTimeout(() => {
                 div.focus();
                 selectElement(div);
@@ -801,12 +839,12 @@
 
         // --- EXPORT MULTI-PAGES ---
         document.getElementById('export-btn').addEventListener('click', async () => {
-            if(!pdfDoc) return;
+            if (!pdfDoc) return;
             const btn = document.getElementById('export-btn');
-            btn.innerText = "Génération...";
+            btn.innerText = "Generating...";
             btn.disabled = true;
             deselectElement(); // Enlever l'état de sélection visuel avant l'export
-            loader.innerText = "Exportation en cours, veuillez patienter...";
+            loader.innerText = "Exporting, please wait...";
             loader.style.display = 'block';
 
             saveCurrentPageData();
@@ -818,19 +856,19 @@
                 for (let i = 1; i <= totalPages; i++) {
                     const page = await pdfDoc.getPage(i);
                     const viewport = page.getViewport({ scale: RENDER_SCALE });
-                    
+
                     const finalCanvas = document.createElement('canvas');
                     finalCanvas.width = viewport.width;
                     finalCanvas.height = viewport.height;
                     const finalCtx = finalCanvas.getContext('2d');
-                    
+
                     finalCtx.fillStyle = 'white';
                     finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
                     await page.render({ canvasContext: finalCtx, viewport: viewport }).promise;
-                    
+
                     const pData = pagesData[i];
-                    
+
                     if (pData && pData.drawingDataUrl) {
                         await new Promise((resolve) => {
                             const img = new Image();
@@ -838,7 +876,7 @@
                             img.src = pData.drawingDataUrl;
                         });
                     }
-                    
+
                     if (pData && pData.textElements) {
                         pData.textElements.forEach(el => {
                             const x = parseFloat(el.style.left);
@@ -854,7 +892,7 @@
                                 finalCtx.font = `${fontSize}px Arial`;
                                 finalCtx.fillStyle = 'black';
                                 finalCtx.textBaseline = 'top';
-                                
+
                                 const lines = el.innerText.split('\n');
                                 let currentY = y + 4;
                                 lines.forEach(line => {
@@ -867,31 +905,32 @@
 
                     const imgData = finalCanvas.toDataURL('image/jpeg', 0.95);
                     const orientation = finalCanvas.width > finalCanvas.height ? 'l' : 'p';
-                    
+
                     if (!pdf) {
                         pdf = new jsPDF(orientation, 'px', [finalCanvas.width, finalCanvas.height]);
                     } else {
                         pdf.addPage([finalCanvas.width, finalCanvas.height], orientation);
                     }
-                    
+
                     pdf.addImage(imgData, 'JPEG', 0, 0, finalCanvas.width, finalCanvas.height);
                 }
 
                 pdf.save('document_annote.pdf');
 
             } catch (e) {
-                console.error("Erreur d'export:", e);
-                alert("Une erreur est survenue lors de l'exportation.");
+                console.error("Export error:", e);
+                alert("An error occurred during export.");
             } finally {
                 restoreCurrentPageData();
-                btn.innerText = "Exporter PDF";
+                btn.innerText = "Export PDF";
                 btn.disabled = false;
                 loader.style.display = 'none';
-                loader.innerText = "Chargement...";
+                loader.innerText = "loading...";
             }
         });
 
         window.addEventListener('load', init);
     </script>
 </body>
+
 </html>
