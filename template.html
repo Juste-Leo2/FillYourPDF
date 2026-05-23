@@ -117,10 +117,14 @@
             pointer-events: none;
         }
 
-        .text-annotation {
+        .text-annotation, .rect-annotation {
             position: absolute;
             pointer-events: auto;
-            border: 1px dashed transparent;
+            border: 2px dashed transparent; /* Bordure transparente par défaut pour focus */
+            cursor: move;
+        }
+
+        .text-annotation {
             padding: 4px;
             min-width: 20px;
             min-height: 20px;
@@ -132,45 +136,67 @@
             cursor: text;
             line-height: 1.2;
         }
-        .text-annotation:focus, .text-annotation:hover {
-            border-color: #3b82f6;
-            background: rgba(255, 255, 255, 0.7);
+
+        /* Classe de sélection active */
+        .selected {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+            z-index: 100;
         }
 
-        .rect-annotation {
-            position: absolute;
-            pointer-events: auto;
-            border: 1px dashed transparent;
-            cursor: move;
-        }
-        .rect-annotation:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
-        }
-
-        /* Toolbar */
-        #toolbar {
+        /* Toolbars */
+        .bottom-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 60px;
-            background: white;
             box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 12px;
-            z-index: 10;
+            z-index: 15;
+            transition: transform 0.3s;
         }
+
+        #toolbar {
+            background: white;
+        }
+
+        #trash-toolbar {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            z-index: 30;
+        }
+
+        #btn-delete-element {
+            background: #fef2f2;
+            color: #ef4444;
+            border: 2px solid #fee2e2;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+        }
+        #btn-delete-element:hover { background: #fee2e2; }
 
         .tool-btn {
             border: none;
             background: #f3f4f6;
             border-radius: 12px;
-            width: 48px;
-            height: 48px;
-            font-size: 22px;
+            width: 44px;
+            height: 44px;
+            font-size: 20px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -216,16 +242,16 @@
 
         #export-btn {
             width: auto;
-            padding: 0 20px;
-            font-size: 16px;
+            padding: 0 15px;
+            font-size: 14px;
             font-weight: bold;
             background: #10b981;
             color: white;
-            margin-left: 20px;
+            margin-left: 10px;
             border-radius: 12px;
             border: none;
             cursor: pointer;
-            height: 48px;
+            height: 44px;
             transition: 0.2s;
         }
 
@@ -269,7 +295,8 @@
         </div>
     </div>
 
-    <div id="pen-options" class="tool-options" style="left: calc(50% - 130px);">
+    <!-- Menus d'options -->
+    <div id="pen-options" class="tool-options" style="left: calc(50% - 150px);">
         <button class="option-btn active" data-size="2" style="border-radius: 50%;">
             <div style="width: 4px; height: 4px; background: currentColor; border-radius: 50%;"></div>
         </button>
@@ -281,13 +308,25 @@
         </button>
     </div>
 
-    <div id="text-options" class="tool-options" style="left: calc(50% - 70px);">
+    <div id="eraser-options" class="tool-options" style="left: calc(50% - 90px);">
+        <button class="option-btn" data-size="10" style="border-radius: 50%;">
+            <div style="width: 14px; height: 14px; background: currentColor; border-radius: 50%; opacity: 0.5;"></div>
+        </button>
+        <button class="option-btn active" data-size="20" style="border-radius: 50%;">
+            <div style="width: 24px; height: 24px; background: currentColor; border-radius: 50%; opacity: 0.5;"></div>
+        </button>
+        <button class="option-btn" data-size="40" style="border-radius: 50%;">
+            <div style="width: 32px; height: 32px; background: currentColor; border-radius: 50%; opacity: 0.5;"></div>
+        </button>
+    </div>
+
+    <div id="text-options" class="tool-options" style="left: calc(50% - 30px);">
         <button class="option-btn" data-size="12">P</button>
         <button class="option-btn active" data-size="18">M</button>
         <button class="option-btn" data-size="28">G</button>
     </div>
 
-    <div id="rect-options" class="tool-options" style="left: calc(50% - 10px);">
+    <div id="rect-options" class="tool-options" style="left: calc(50% + 30px);">
         <button class="option-btn active" data-color="white" style="border: 1px solid #d1d5db;">
             <div style="width: 20px; height: 20px; background: white; border: 1px solid #ccc;"></div>
         </button>
@@ -296,12 +335,19 @@
         </button>
     </div>
 
-    <div id="toolbar">
-        <button id="btn-main" class="tool-btn active" title="Main (Déplacer/Zoomer)">✋</button>
-        <button id="btn-pen" class="tool-btn" title="Stylo (Dessiner)">✏️</button>
+    <!-- Toolbar Classique -->
+    <div id="toolbar" class="bottom-bar">
+        <button id="btn-main" class="tool-btn active" title="Déplacer/Zoomer">✋</button>
+        <button id="btn-pen" class="tool-btn" title="Stylo">✏️</button>
+        <button id="btn-eraser" class="tool-btn" title="Gomme">🧽</button>
         <button id="btn-text" class="tool-btn" title="Texte">T</button>
-        <button id="btn-rect" class="tool-btn" title="Rectangle (Masquer/Censurer)">⬛</button>
+        <button id="btn-rect" class="tool-btn" title="Masquer/Censurer">⬛</button>
         <button id="export-btn">Exporter PDF</button>
+    </div>
+
+    <!-- Toolbar Poubelle -->
+    <div id="trash-toolbar">
+        <button id="btn-delete-element">🗑️ Delete</button>
     </div>
 
     <script id="pdf-data" type="text/plain">{{PDF_BASE64}}</script>
@@ -309,9 +355,10 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // Variables d'état Global
-        let currentMode = 'MAIN'; // 'MAIN', 'PEN', 'TEXT', 'RECT'
+        // --- ETAT GLOBAL ---
+        let currentMode = 'MAIN'; // MAIN, PEN, ERASER, TEXT, RECT
         let currentPenSize = 2;
+        let currentEraserSize = 20;
         let currentTextSize = 18;
         let currentRectColor = 'white';
         
@@ -323,15 +370,18 @@
         let startRectPoint = null;
         let currentRectElement = null;
 
-        // Variables Multi-pages
+        // Sélection d'objet
+        let selectedElement = null;
+
+        // Multi-pages
         let pdfDoc = null;
         let currentPage = 1;
         let totalPages = 1;
-        let pagesData = []; // Stockage virtuel : { drawingDataUrl: str, textElements: [DOMElement] }
+        let pagesData = []; // { drawingDataUrl: str, textElements: [DOMElement] }
 
         const RENDER_SCALE = 2.0;
 
-        // DOM
+        // DOM Elements
         const appContainer = document.getElementById('app-container');
         const workspace = document.getElementById('workspace');
         const pageContainer = document.getElementById('page-container');
@@ -343,6 +393,7 @@
         const pdfCtx = pdfCanvas.getContext('2d');
         const drawCtx = drawCanvas.getContext('2d');
 
+        // --- INITIALISATION ---
         async function init() {
             const base64Data = document.getElementById('pdf-data').textContent.trim();
             
@@ -370,17 +421,18 @@
                 }
 
                 await loadPage(1);
-
             } catch (err) {
                 console.error("Erreur chargement PDF:", err);
                 loader.innerText = "Erreur de chargement du PDF.";
             }
         }
 
+        // --- GESTION DES PAGES ---
         async function loadPage(pageNum) {
             if (pageNum < 1 || pageNum > totalPages) return;
             
             loader.style.display = 'block';
+            deselectElement(); // Enlever la sélection au changement de page
             
             if (pdfDoc && drawCanvas.width > 0) saveCurrentPageData();
 
@@ -395,7 +447,6 @@
                 const viewport = pdfPage.getViewport({ scale: RENDER_SCALE });
 
                 setupCanvas(viewport.width, viewport.height);
-
                 await pdfPage.render({ canvasContext: pdfCtx, viewport: viewport }).promise;
 
                 restoreCurrentPageData();
@@ -408,7 +459,6 @@
 
         function saveCurrentPageData() {
             pagesData[currentPage].drawingDataUrl = drawCanvas.toDataURL();
-            // Les rectangles et les textes partagent la même logique de layer !
             pagesData[currentPage].textElements = Array.from(textLayer.children);
             textLayer.innerHTML = '';
         }
@@ -428,18 +478,6 @@
                 data.textElements.forEach(el => textLayer.appendChild(el));
             }
         }
-
-        // Navigation UI
-        document.getElementById('btn-prev-page').addEventListener('click', () => loadPage(currentPage - 1));
-        document.getElementById('btn-next-page').addEventListener('click', () => loadPage(currentPage + 1));
-        
-        document.getElementById('page-input').addEventListener('change', (e) => {
-            let val = parseInt(e.target.value);
-            if (isNaN(val) || val < 1) val = 1;
-            if (val > totalPages) val = totalPages;
-            e.target.value = val;
-            if (val !== currentPage) loadPage(val);
-        });
 
         function setupCanvas(w, h) {
             pageContainer.style.width = `${w}px`;
@@ -461,49 +499,95 @@
             workspace.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
         }
 
-        // Toolbar UI
+        // --- UI & OUTILS ---
+        document.getElementById('btn-prev-page').addEventListener('click', () => loadPage(currentPage - 1));
+        document.getElementById('btn-next-page').addEventListener('click', () => loadPage(currentPage + 1));
+        document.getElementById('page-input').addEventListener('change', (e) => {
+            let val = parseInt(e.target.value);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > totalPages) val = totalPages;
+            e.target.value = val;
+            if (val !== currentPage) loadPage(val);
+        });
+
         document.getElementById('btn-main').addEventListener('click', () => setMode('MAIN'));
         document.getElementById('btn-pen').addEventListener('click', () => setMode('PEN'));
+        document.getElementById('btn-eraser').addEventListener('click', () => setMode('ERASER'));
         document.getElementById('btn-text').addEventListener('click', () => setMode('TEXT'));
         document.getElementById('btn-rect').addEventListener('click', () => setMode('RECT'));
 
-        document.querySelectorAll('#pen-options .option-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('#pen-options .option-btn').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                currentPenSize = parseInt(e.currentTarget.dataset.size);
+        function setupOptionButtons(containerId, updateVarCb) {
+            document.querySelectorAll(`#${containerId} .option-btn`).forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll(`#${containerId} .option-btn`).forEach(b => b.classList.remove('active'));
+                    e.currentTarget.classList.add('active');
+                    updateVarCb(e.currentTarget);
+                });
             });
-        });
+        }
 
-        document.querySelectorAll('#text-options .option-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('#text-options .option-btn').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                currentTextSize = parseInt(e.currentTarget.dataset.size);
-            });
-        });
-
-        document.querySelectorAll('#rect-options .option-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('#rect-options .option-btn').forEach(b => b.classList.remove('active'));
-                e.currentTarget.classList.add('active');
-                currentRectColor = e.currentTarget.dataset.color;
-            });
-        });
+        setupOptionButtons('pen-options', (btn) => currentPenSize = parseInt(btn.dataset.size));
+        setupOptionButtons('eraser-options', (btn) => currentEraserSize = parseInt(btn.dataset.size));
+        setupOptionButtons('text-options', (btn) => currentTextSize = parseInt(btn.dataset.size));
+        setupOptionButtons('rect-options', (btn) => currentRectColor = btn.dataset.color);
 
         function setMode(mode) {
             currentMode = mode;
+            deselectElement(); // Enlever la sélection si on change d'outil
+            
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(mode === 'MAIN' ? 'btn-main' : mode === 'PEN' ? 'btn-pen' : mode === 'TEXT' ? 'btn-text' : 'btn-rect').classList.add('active');
+            const activeBtn = mode === 'MAIN' ? 'btn-main' : mode === 'PEN' ? 'btn-pen' : mode === 'ERASER' ? 'btn-eraser' : mode === 'TEXT' ? 'btn-text' : 'btn-rect';
+            document.getElementById(activeBtn).classList.add('active');
             
             document.getElementById('pen-options').classList.toggle('visible', mode === 'PEN');
+            document.getElementById('eraser-options').classList.toggle('visible', mode === 'ERASER');
             document.getElementById('text-options').classList.toggle('visible', mode === 'TEXT');
             document.getElementById('rect-options').classList.toggle('visible', mode === 'RECT');
 
-            drawCanvas.style.cursor = mode === 'MAIN' ? 'grab' : (mode === 'PEN' || mode === 'RECT') ? 'crosshair' : 'text';
+            drawCanvas.style.cursor = mode === 'MAIN' ? 'grab' : (mode === 'PEN' || mode === 'ERASER' || mode === 'RECT') ? 'crosshair' : 'text';
         }
 
-        // Zoom / Pan events
+        // --- GESTION DE LA SELECTION ET POUBELLE ---
+        function selectElement(el) {
+            if (selectedElement) selectedElement.classList.remove('selected');
+            selectedElement = el;
+            el.classList.add('selected');
+            if (totalPages > 1) document.getElementById('page-nav').style.display = 'none';
+            document.getElementById('trash-toolbar').style.display = 'flex';
+            // Mode MAIN automatique pour bien pouvoir le bouger
+            if (currentMode === 'TEXT' || currentMode === 'RECT') {
+                setMode('MAIN');
+                selectElement(el); // re-sélectionne car setMode nettoie la sélection
+            }
+        }
+
+        function deselectElement() {
+            if (selectedElement) selectedElement.classList.remove('selected');
+            selectedElement = null;
+            document.getElementById('trash-toolbar').style.display = 'none';
+            if (totalPages > 1) document.getElementById('page-nav').style.display = 'flex';
+        }
+
+        document.getElementById('btn-delete-element').addEventListener('click', () => {
+            if (selectedElement) {
+                selectedElement.remove();
+                deselectElement();
+            }
+        });
+
+        // Désélectionner quand on clique dans le vide
+        appContainer.addEventListener('mousedown', (e) => {
+            if (selectedElement && !e.target.classList.contains('text-annotation') && !e.target.classList.contains('rect-annotation')) {
+                deselectElement();
+            }
+        });
+        appContainer.addEventListener('touchstart', (e) => {
+            if (selectedElement && !e.target.classList.contains('text-annotation') && !e.target.classList.contains('rect-annotation')) {
+                deselectElement();
+            }
+        }, {passive: false});
+
+        // --- INTERACTIONS DESSIN ET CANVAS ---
         appContainer.addEventListener('wheel', (e) => {
             e.preventDefault();
             if (e.ctrlKey || e.metaKey || currentMode === 'MAIN') {
@@ -565,10 +649,20 @@
             } else if (currentMode === 'PEN') {
                 isDrawing = true;
                 lastDrawPoint = getCanvasCoords(e);
+                drawCtx.globalCompositeOperation = 'source-over';
                 drawCtx.lineWidth = currentPenSize * RENDER_SCALE;
                 drawCtx.beginPath();
                 drawCtx.arc(lastDrawPoint.x, lastDrawPoint.y, (currentPenSize * RENDER_SCALE) / 2, 0, Math.PI * 2);
                 drawCtx.fill();
+            } else if (currentMode === 'ERASER') {
+                isDrawing = true;
+                lastDrawPoint = getCanvasCoords(e);
+                drawCtx.globalCompositeOperation = 'destination-out';
+                drawCtx.lineWidth = currentEraserSize * RENDER_SCALE;
+                drawCtx.beginPath();
+                drawCtx.arc(lastDrawPoint.x, lastDrawPoint.y, (currentEraserSize * RENDER_SCALE) / 2, 0, Math.PI * 2);
+                drawCtx.fill();
+                drawCtx.globalCompositeOperation = 'source-over'; // Reset pour ne pas bugger les autres modes
             } else if (currentMode === 'RECT') {
                 isDrawingRect = true;
                 startRectPoint = getCanvasCoords(e);
@@ -601,12 +695,24 @@
             } else if (isDrawing && currentMode === 'PEN') {
                 e.preventDefault();
                 const coords = getCanvasCoords(e);
+                drawCtx.globalCompositeOperation = 'source-over';
                 drawCtx.lineWidth = currentPenSize * RENDER_SCALE;
                 drawCtx.beginPath();
                 drawCtx.moveTo(lastDrawPoint.x, lastDrawPoint.y);
                 drawCtx.lineTo(coords.x, coords.y);
                 drawCtx.stroke();
                 lastDrawPoint = coords;
+            } else if (isDrawing && currentMode === 'ERASER') {
+                e.preventDefault();
+                const coords = getCanvasCoords(e);
+                drawCtx.globalCompositeOperation = 'destination-out';
+                drawCtx.lineWidth = currentEraserSize * RENDER_SCALE;
+                drawCtx.beginPath();
+                drawCtx.moveTo(lastDrawPoint.x, lastDrawPoint.y);
+                drawCtx.lineTo(coords.x, coords.y);
+                drawCtx.stroke();
+                lastDrawPoint = coords;
+                drawCtx.globalCompositeOperation = 'source-over';
             } else if (isDrawingRect && currentMode === 'RECT') {
                 e.preventDefault();
                 const coords = getCanvasCoords(e);
@@ -630,6 +736,8 @@
                 const h = parseFloat(currentRectElement.style.height);
                 if (w < 5 || h < 5) {
                     currentRectElement.remove(); // Evite les micro-clics
+                } else {
+                    selectElement(currentRectElement); // Auto-selection à la fin du dessin
                 }
             }
             isDrawingRect = false;
@@ -638,15 +746,17 @@
             if (currentMode === 'MAIN') drawCanvas.style.cursor = 'grab';
         }
 
+        // --- GESTION DES OBJETS (DOM) ---
         function attachDraggableEvents(el, isRect = false) {
             let isDragging = false, startPos = {x: 0, y: 0};
             
             const onDown = (e) => {
-                if ((currentMode !== 'TEXT' && currentMode !== 'RECT') && document.activeElement !== el) {
-                    isDragging = true;
-                    startPos = { x: e.clientX || e.touches[0].clientX, y: e.clientY || e.touches[0].clientY, left: parseFloat(el.style.left), top: parseFloat(el.style.top) };
-                    e.stopPropagation();
-                }
+                selectElement(el); // Sélection de l'élément au clic
+                e.stopPropagation(); // Empêcher de dessiner ou déselectionner en dessous
+
+                // On peut le déplacer directement
+                isDragging = true;
+                startPos = { x: e.clientX || e.touches[0].clientX, y: e.clientY || e.touches[0].clientY, left: parseFloat(el.style.left), top: parseFloat(el.style.top) };
             };
 
             el.addEventListener('mousedown', onDown);
@@ -667,22 +777,6 @@
             window.addEventListener('mouseup', () => isDragging = false);
             window.addEventListener('touchend', () => isDragging = false);
 
-            // Double clic / tap pour supprimer
-            let lastTap = 0;
-            const handleDelete = (e) => {
-                e.preventDefault(); e.stopPropagation();
-                el.remove();
-            };
-            el.addEventListener('dblclick', handleDelete);
-            el.addEventListener('touchend', (e) => {
-                const currentTime = new Date().getTime();
-                const tapLength = currentTime - lastTap;
-                if (tapLength < 500 && tapLength > 0) {
-                    handleDelete(e);
-                }
-                lastTap = currentTime;
-            });
-
             if (!isRect) {
                 el.addEventListener('blur', () => { if (el.innerText.trim() === '') el.remove(); });
             }
@@ -698,15 +792,20 @@
             
             attachDraggableEvents(div, false);
             textLayer.appendChild(div);
-            setTimeout(() => div.focus(), 50);
+            
+            setTimeout(() => {
+                div.focus();
+                selectElement(div);
+            }, 50);
         }
 
-        // Export Multi-pages
+        // --- EXPORT MULTI-PAGES ---
         document.getElementById('export-btn').addEventListener('click', async () => {
             if(!pdfDoc) return;
             const btn = document.getElementById('export-btn');
             btn.innerText = "Génération...";
             btn.disabled = true;
+            deselectElement(); // Enlever l'état de sélection visuel avant l'export
             loader.innerText = "Exportation en cours, veuillez patienter...";
             loader.style.display = 'block';
 
@@ -732,7 +831,6 @@
                     
                     const pData = pagesData[i];
                     
-                    // 1. Appliquer Dessin
                     if (pData && pData.drawingDataUrl) {
                         await new Promise((resolve) => {
                             const img = new Image();
@@ -741,7 +839,6 @@
                         });
                     }
                     
-                    // 2. Appliquer Elements du DOM (Textes & Rectangles)
                     if (pData && pData.textElements) {
                         pData.textElements.forEach(el => {
                             const x = parseFloat(el.style.left);
