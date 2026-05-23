@@ -1,0 +1,17 @@
+{
+  "name": "fill-your-pdf",
+  "version": "1.0.0",
+  "description": "Prototype minimaliste pour convertir un PDF en un document web annotable (.fill)",
+  "main": "create-fill.js",
+  "scripts": {
+    "start": "node create-fill.js sample.pdf"
+  },
+  "keywords": [
+    "pdf",
+    "annotation",
+    "fill",
+    "prototype"
+  ],
+  "author": "",
+  "license": "ISC"
+}
