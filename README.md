@@ -19,7 +19,16 @@ FillYourPDF is a minimalist, dependency-free tool that converts any PDF document
 
 ### 1. Convert your PDF
 
-To convert your PDF into an interactive HTML file, simply run the generator script via your terminal using Node.js:
+#### Option A: Local Web Interface (Recommended)
+For a visual, user-friendly experience, you can launch the local web interface. 
+- **On Windows:** Simply double-click `start-ui.bat`. It will automatically check if Node.js is installed and open the interface in your browser.
+- **Via Terminal:** Run the following command:
+```bash
+node create-fill.js --ui
+```
+
+#### Option B: Command Line Interface (CLI)
+You can also use the terminal directly for quick conversions or batch processing:
 
 ```bash
 node create-fill.js <path_to_your_document.pdf> [-z]
