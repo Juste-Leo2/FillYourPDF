@@ -915,7 +915,16 @@
                     pdf.addImage(imgData, 'JPEG', 0, 0, finalCanvas.width, finalCanvas.height);
                 }
 
-                pdf.save('document_annote.pdf');
+                    let outName = decodeURIComponent(window.location.pathname.split('/').pop() || 'document');
+                    if (outName.endsWith('.fill.html')) {
+                        outName = outName.replace('.fill.html', '_annotated.pdf');
+                    } else if (outName.endsWith('.html')) {
+                        outName = outName.replace('.html', '_annotated.pdf');
+                    } else {
+                        outName += '_annotated.pdf';
+                    }
+                    
+                    pdf.save(outName);
 
             } catch (e) {
                 console.error("Export error:", e);
