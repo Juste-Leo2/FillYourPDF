@@ -364,13 +364,15 @@
         <button class="option-btn" data-size="28">G</button>
     </div>
 
-    <div id="rect-options" class="tool-options" style="left: calc(50% + 30px);">
-        <button class="option-btn active" data-color="white" style="border: 1px solid #d1d5db;">
-            <div style="width: 20px; height: 20px; background: white; border: 1px solid #ccc;"></div>
-        </button>
-        <button class="option-btn" data-color="black">
-            <div style="width: 20px; height: 20px; background: black;"></div>
-        </button>
+    <div id="color-options" class="tool-options" style="left: calc(50% + 30px); flex-wrap: wrap; width: 140px; justify-content: center;">
+        <button class="option-btn active" data-color="black"><div style="width: 20px; height: 20px; background: black; border-radius: 50%;"></div></button>
+        <button class="option-btn" data-color="white" style="border: 1px solid #d1d5db;"><div style="width: 20px; height: 20px; background: white; border-radius: 50%;"></div></button>
+        <button class="option-btn" data-color="#ef4444"><div style="width: 20px; height: 20px; background: #ef4444; border-radius: 50%;"></div></button>
+        <button class="option-btn" data-color="#3b82f6"><div style="width: 20px; height: 20px; background: #3b82f6; border-radius: 50%;"></div></button>
+        <button class="option-btn" data-color="#10b981"><div style="width: 20px; height: 20px; background: #10b981; border-radius: 50%;"></div></button>
+        <button class="option-btn" data-color="#eab308"><div style="width: 20px; height: 20px; background: #eab308; border-radius: 50%;"></div></button>
+        <button class="option-btn" data-color="#f97316"><div style="width: 20px; height: 20px; background: #f97316; border-radius: 50%;"></div></button>
+        <button class="option-btn" data-color="#a855f7"><div style="width: 20px; height: 20px; background: #a855f7; border-radius: 50%;"></div></button>
     </div>
 
     <!-- Toolbar Classique -->
@@ -380,6 +382,9 @@
         <button id="btn-eraser" class="tool-btn" title="Eraser">🧽</button>
         <button id="btn-text" class="tool-btn" title="Text">T</button>
         <button id="btn-rect" class="tool-btn" title="Hide/Redact">⬛</button>
+        <button id="btn-color" class="tool-btn" title="Color">
+            <div id="color-indicator" style="width: 20px; height: 20px; background-color: black; border-radius: 50%;"></div>
+        </button>
         <button id="export-btn">Export PDF</button>
     </div>
 
@@ -398,7 +403,7 @@
         let currentPenSize = 2;
         let currentEraserSize = 20;
         let currentTextSize = 18;
-        let currentRectColor = 'white';
+        let globalColor = 'black';
 
         let transform = { scale: 1, x: 0, y: 0 };
         let isPanning = false, startPan = { x: 0, y: 0 };
@@ -554,6 +559,11 @@
         document.getElementById('btn-text').addEventListener('click', () => setMode('TEXT'));
         document.getElementById('btn-rect').addEventListener('click', () => setMode('RECT'));
 
+        document.getElementById('btn-color').addEventListener('click', (e) => {
+            document.getElementById('color-options').classList.toggle('visible');
+            e.stopPropagation();
+        });
+
         function setupOptionButtons(containerId, updateVarCb) {
             document.querySelectorAll(`#${containerId} .option-btn`).forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -564,13 +574,34 @@
             });
         }
 
+        let lastDrawingMode = 'PEN';
+
         setupOptionButtons('pen-options', (btn) => currentPenSize = parseInt(btn.dataset.size));
         setupOptionButtons('eraser-options', (btn) => currentEraserSize = parseInt(btn.dataset.size));
         setupOptionButtons('text-options', (btn) => currentTextSize = parseInt(btn.dataset.size));
-        setupOptionButtons('rect-options', (btn) => currentRectColor = btn.dataset.color);
+        setupOptionButtons('color-options', (btn) => {
+            globalColor = btn.dataset.color;
+            const indicator = document.getElementById('color-indicator');
+            indicator.style.backgroundColor = globalColor;
+            indicator.style.border = globalColor === 'white' ? '1px solid #ccc' : 'none';
+            document.getElementById('color-options').classList.remove('visible');
+
+            if (selectedElement) {
+                if (selectedElement.classList.contains('rect-annotation')) {
+                    selectedElement.style.backgroundColor = globalColor;
+                } else if (selectedElement.classList.contains('text-annotation')) {
+                    selectedElement.style.color = globalColor;
+                }
+            } else if (currentMode === 'MAIN') {
+                setMode(lastDrawingMode);
+            }
+        });
 
         function setMode(mode) {
             currentMode = mode;
+            if (mode !== 'MAIN' && mode !== 'ERASER') {
+                lastDrawingMode = mode;
+            }
             deselectElement(); // Enlever la sélection si on change d'outil
 
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -580,7 +611,6 @@
             document.getElementById('pen-options').classList.toggle('visible', mode === 'PEN');
             document.getElementById('eraser-options').classList.toggle('visible', mode === 'ERASER');
             document.getElementById('text-options').classList.toggle('visible', mode === 'TEXT');
-            document.getElementById('rect-options').classList.toggle('visible', mode === 'RECT');
 
             drawCanvas.style.cursor = mode === 'MAIN' ? 'grab' : (mode === 'PEN' || mode === 'ERASER' || mode === 'RECT') ? 'crosshair' : 'text';
         }
@@ -615,11 +645,13 @@
 
         // Désélectionner quand on clique dans le vide
         appContainer.addEventListener('mousedown', (e) => {
+            document.getElementById('color-options').classList.remove('visible');
             if (selectedElement && !e.target.classList.contains('text-annotation') && !e.target.classList.contains('rect-annotation')) {
                 deselectElement();
             }
         });
         appContainer.addEventListener('touchstart', (e) => {
+            document.getElementById('color-options').classList.remove('visible');
             if (selectedElement && !e.target.classList.contains('text-annotation') && !e.target.classList.contains('rect-annotation')) {
                 deselectElement();
             }
@@ -688,6 +720,8 @@
                 isDrawing = true;
                 lastDrawPoint = getCanvasCoords(e);
                 drawCtx.globalCompositeOperation = 'source-over';
+                drawCtx.fillStyle = globalColor;
+                drawCtx.strokeStyle = globalColor;
                 drawCtx.lineWidth = currentPenSize * RENDER_SCALE;
                 drawCtx.beginPath();
                 drawCtx.arc(lastDrawPoint.x, lastDrawPoint.y, (currentPenSize * RENDER_SCALE) / 2, 0, Math.PI * 2);
@@ -707,7 +741,7 @@
 
                 currentRectElement = document.createElement('div');
                 currentRectElement.className = 'rect-annotation';
-                currentRectElement.style.backgroundColor = currentRectColor;
+                currentRectElement.style.backgroundColor = globalColor;
                 currentRectElement.style.left = `${startRectPoint.x}px`;
                 currentRectElement.style.top = `${startRectPoint.y}px`;
                 currentRectElement.style.width = '0px';
@@ -734,6 +768,7 @@
                 e.preventDefault();
                 const coords = getCanvasCoords(e);
                 drawCtx.globalCompositeOperation = 'source-over';
+                drawCtx.strokeStyle = globalColor;
                 drawCtx.lineWidth = currentPenSize * RENDER_SCALE;
                 drawCtx.beginPath();
                 drawCtx.moveTo(lastDrawPoint.x, lastDrawPoint.y);
@@ -827,6 +862,7 @@
             div.style.left = `${x}px`;
             div.style.top = `${y}px`;
             div.style.fontSize = `${currentTextSize * RENDER_SCALE}px`;
+            div.style.color = globalColor;
 
             attachDraggableEvents(div, false);
             textLayer.appendChild(div);
@@ -890,7 +926,7 @@
                             } else {
                                 const fontSize = parseFloat(el.style.fontSize);
                                 finalCtx.font = `${fontSize}px Arial`;
-                                finalCtx.fillStyle = 'black';
+                                finalCtx.fillStyle = el.style.color || 'black';
                                 finalCtx.textBaseline = 'top';
 
                                 const lines = el.innerText.split('\n');
