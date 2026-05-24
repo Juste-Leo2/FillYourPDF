@@ -23,6 +23,7 @@ To convert your PDF into an interactive HTML file, simply run the generator scri
 
 ```bash
 node create-fill.js <path_to_your_document.pdf> [-z]
+node create-fill.js --dir <directory> [-z]
 ```
 
 *Examples:*
@@ -32,9 +33,14 @@ node create-fill.js sample.pdf
 This will generate a new file named `sample.fill.html` in your current directory.
 
 ```bash
+node create-fill.js --dir "my_pdfs"
+```
+This will find all `.pdf` files in the `my_pdfs` directory and generate their corresponding `.fill.html` files in a new directory named `my_pdfs_fill` right next to it.
+
+```bash
 node create-fill.js sample.pdf -z
 ```
-If you pass the `-z` flag, the generated file will be automatically compressed into a `.zip` archive (e.g., `sample.fill.zip`), and the original `.fill.html` file will be deleted. This is useful for saving space or sharing the interactive document more easily.
+If you pass the `-z` flag, the generated file will be automatically compressed into a `.zip` archive (e.g., `sample.fill.zip`), and the original `.fill.html` file will be deleted. This is useful for saving space or sharing the interactive document more easily. The `-z` flag also works with the `--dir` command.
 
 ### 2. Annotate
 
